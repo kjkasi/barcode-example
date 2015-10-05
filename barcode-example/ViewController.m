@@ -8,11 +8,13 @@
 
 #import "ViewController.h"
 
-@interface ViewController ()
+@interface ViewController () <AVCaptureMetadataOutputObjectsDelegate>
 
 @property (nonatomic, strong) AVCaptureSession *session;
 
-@property (nonatomic, strong) AVCaptureVideoPreviewLayer *preview;
+@property (nonatomic, strong) AVCaptureDevice *device;
+
+@property (nonatomic, strong) AVCaptureMetadataOutput *output;
 
 @end
 
@@ -53,6 +55,18 @@
     // Dispose of any resources that can be recreated.
 }
 
+- (AVCaptureDevice *)device {
+    
+    if (_device == nil) {
+        
+        AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+        _device = device;
+        
+    }
+    
+    return _device;
+}
+
 - (AVCaptureSession *)session {
     
     if (_session == nil) {
@@ -62,18 +76,59 @@
             session.sessionPreset = AVCaptureSessionPresetHigh;
         }
         
-        AVCaptureDevice *devica = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-        
         NSError *error = nil;
         
-        AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:devica error:&error];
+        AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:self.device error:&error];
         
         [session addInput:input];
+        
+        [session addOutput:self.output];
+        
+        NSMutableArray *types = [@[AVMetadataObjectTypeQRCode,
+                                   AVMetadataObjectTypeUPCECode,
+                                   AVMetadataObjectTypeCode39Code,
+                                   AVMetadataObjectTypeCode39Mod43Code,
+                                   AVMetadataObjectTypeEAN13Code,
+                                   AVMetadataObjectTypeEAN8Code,
+                                   AVMetadataObjectTypeCode93Code,
+                                   AVMetadataObjectTypeCode128Code,
+                                   AVMetadataObjectTypePDF417Code,
+                                   AVMetadataObjectTypeAztecCode] mutableCopy];
+        
+        if (floor(NSFoundationVersionNumber) > NSFoundationVersionNumber_iOS_7_1) {
+            [types addObjectsFromArray:@[
+                                         AVMetadataObjectTypeInterleaved2of5Code,
+                                         AVMetadataObjectTypeITF14Code,
+                                         AVMetadataObjectTypeDataMatrixCode
+                                         ]];
+        }
+        
+        self.output.metadataObjectTypes = types;
         
         _session = session;
         
     }
     return _session;
+}
+
+- (AVCaptureMetadataOutput *)output {
+    
+    if (_output == nil) {
+        
+        AVCaptureMetadataOutput *output = [[AVCaptureMetadataOutput alloc] init];
+        
+        [output setMetadataObjectsDelegate:self queue:dispatch_get_main_queue()];
+        
+        _output = output;
+    }
+    
+    return _output;
+}
+
+#pragma mark - AVCaptureMetadataOutputObjectsDelegate
+
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection {
+    
 }
 
 @end
